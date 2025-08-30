@@ -1,4 +1,4 @@
-# FlightMap-Turtle
+# FlightPath-Turtle
 Records flight times and costs and provides flight statistics.
 
 /fp or /flightpath for UI
