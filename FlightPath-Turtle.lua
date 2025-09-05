@@ -28,19 +28,6 @@ local defaults = {
     }
 }
 
-local function FlightPathTurtle_OnKeyDown(key)
-    if key == "ESCAPE" then
-        if LibStub("AceConfigDialog-3.0"):IsVisible(addonName) then
-            LibStub("AceConfigDialog-3.0"):Close(addonName)
-            return
-        end
-    end
-
-    if originalOnKeyDown then
-        originalOnKeyDown(key)
-    end
-end
-
 -- Variables
 local flightStartTime = 0
 local currentFlightFromIndex = 0
@@ -53,7 +40,6 @@ local flightPending = false
 local isInFlight = false
 local optionsFrame = nil
 local isTooltipHooked = false
-local originalOnKeyDown = nil
 
 function addon:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("FlightPathTurtleDB", defaults, "char")
@@ -74,17 +60,10 @@ function addon:OnEnable()
     self:RegisterEvent("PLAYER_ENTERING_WORLD", "OnPlayerEnteringWorld")
 
     self:RawHook("TakeTaxiNode", "OnTakeTaxiNode", true)
-	
-    originalOnKeyDown = UIParent:GetScript("OnKeyDown")
-    UIParent:SetScript("OnKeyDown", FlightPathTurtle_OnKeyDown)
 end
 
 function addon:OnDisable()
     self:UnregisterAllEvents()
-
-    if UIParent:GetScript("OnKeyDown") == FlightPathTurtle_OnKeyDown then
-        UIParent:SetScript("OnKeyDown", originalOnKeyDown)
-    end
 end
 
 function addon:OnTaxiMapOpened()
@@ -585,8 +564,24 @@ function addon:CreateOptionsUI()
 
     self:RegisterOptionsTable(addonName, options)
     LibStub("AceConfigDialog-3.0"):SetDefaultSize(addonName, 415, 320)
-end
 
+    local ACD = LibStub("AceConfigDialog-3.0")
+    local originalOpen = ACD.Open
+    ACD.Open = function(self, appName, ...)
+        local result = originalOpen(self, appName, unpack(arg))
+        if appName == addonName then
+            local frame = ACD.OpenFrames[appName]
+            if frame and frame.frame and not frame.escapeRegistered then
+                local frameName = "FlightPathTurtleOptionsFrame"
+                frame.frame.name = frameName
+                _G[frameName] = frame.frame
+                tinsert(UISpecialFrames, frameName)
+                frame.escapeRegistered = true
+            end
+        end
+        return result
+    end
+end
 
 StaticPopupDialogs["FLIGHTPATH_TURTLE_CONFIRM"] = {
     text = "Take flight to %s for %s?",
