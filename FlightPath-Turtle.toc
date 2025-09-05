@@ -2,7 +2,7 @@
 ## Title: |cff33ff99FlightPath-Turtle|r
 ## Notes: Records flight times and costs and provides flight statistics.
 ## Author: tilr
-## Version: 1.0
+## Version: 1.1
 ## SavedVariables: FlightPathTurtleDB
 ## OptionalDeps: Ace3
 
@@ -22,3 +22,4 @@ libs\AceHook-3.0\AceHook-3.0.xml
 
 # Core Addon Files
 FlightPath-Turtle.lua
+
