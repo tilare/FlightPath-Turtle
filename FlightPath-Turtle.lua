@@ -197,14 +197,24 @@ function addon:StartFlight(from, to, cost)
         knownTime = self.db.char.flightTimes[from][to]
     end
 
-    if self.db.char.options.announceETA and GetNumPartyMembers() > 0 then
-        local etaText
-        if knownTime and knownTime > 0 then
-            etaText = "ETA: " .. self:FormatTime(knownTime)
-        else
-            etaText = "ETA: (Timing...)"
+    -- Announce ETA to Party or Raid
+    if self.db.char.options.announceETA then
+        local chatChannel = nil
+        if GetNumRaidMembers() > 0 then
+            chatChannel = "RAID"
+        elseif GetNumPartyMembers() > 0 then
+            chatChannel = "PARTY"
         end
-        SendChatMessage("Flying to " .. (to or "Unknown") .. ". " .. etaText, "PARTY")
+
+        if chatChannel then
+            local etaText
+            if knownTime and knownTime > 0 then
+                etaText = "ETA: " .. self:FormatTime(knownTime)
+            else
+                etaText = "ETA: (Timing...)"
+            end
+            SendChatMessage("Flying to " .. (to or "Unknown") .. ". " .. etaText, chatChannel)
+        end
     end
 
     if self.db.char.options.showTimer then
@@ -510,8 +520,8 @@ function addon:CreateOptionsUI()
             announceETA = {
                 order = 14,
                 type = "toggle",
-                name = "Announce ETA to Party",
-                desc = "Automatically announce your destination and ETA in party chat when you take a flight.",
+                name = "Announce ETA to Party/Raid",
+                desc = "Automatically announce your destination and ETA in party or raid chat when you take a flight.",
                 get = function(info) return addon.db.char.options.announceETA end,
                 set = function(info, val) addon.db.char.options.announceETA = val end,
             },
