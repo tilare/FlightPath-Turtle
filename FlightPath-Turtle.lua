@@ -47,7 +47,7 @@ local currentFlightFromIndex = 0
 local currentFlightToIndex = 0
 local pendingFlightCost = nil
 local lastClickedTaxiNode = nil
-local currentTaxiNodeName = nil -- Store the name of the node when the map is opened
+local currentTaxiNodeName = nil
 local isConfirming = false
 local flightPending = false
 local isInFlight = false
@@ -155,7 +155,14 @@ end
 function addon:OnTaxiNodeEnter(button)
     self.hooks.TaxiNodeOnButtonEnter(button)
 
-    local destination = TaxiNodeName(button:GetID())
+    local nodeIndex = button:GetID()
+    local nodeType = TaxiNodeGetType(nodeIndex)
+
+    if nodeType == "CURRENT" then
+        return
+    end
+
+    local destination = TaxiNodeName(nodeIndex)
     local origin = nil
 
     for i = 1, NumTaxiNodes() do
@@ -209,11 +216,22 @@ function addon:StartFlight(from, to, cost)
         timer.duration = knownTime or 0
         timer.cost = cost
 
-        if knownTime then
-            timer.text:SetText("To: " .. (to or "Unknown"))
-        else
-            timer.text:SetText("To: " .. (to or "Unknown") .. " (Timing...)")
+        local destinationName = to or "Unknown"
+        local zoneName = ""
+
+        local commaPosition = string.find(destinationName, ", ")
+        if commaPosition then
+            zoneName = string.sub(destinationName, commaPosition + 2)
+            destinationName = string.sub(destinationName, 1, commaPosition - 1)
         end
+        
+        local timingText = ""
+        if not knownTime then
+            timingText = " (Timing...)"
+        end
+
+        timer.text:SetText("To: " .. destinationName .. timingText)
+        timer.zone:SetText(zoneName)
     end
 end
 
@@ -305,7 +323,7 @@ end
 function addon:CreateFlightTimer()
     local f = CreateFrame("Frame", "FlightPathTurtleTimer", UIParent)
     f:SetWidth(200)
-    f:SetHeight(50)
+    f:SetHeight(55)
     f:SetPoint(
         self.db.char.timerPosition.point,
         UIParent,
@@ -347,15 +365,35 @@ function addon:CreateFlightTimer()
     f.text:SetPoint("TOP", f, "TOP", 0, -8)
     f.text:SetText("Destination: Unknown")
 
-    f.timer = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    f.timer:SetPoint("CENTER", f, "CENTER", 0, -2)
-    f.timer:SetText("00:00")
+    f.zone = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    f.zone:SetPoint("TOP", f.text, "BOTTOM", 0, -2)
+    f.zone:SetTextColor(0.8, 0.8, 0.8)
 
-    -- Help text
-    f.help = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    f.help:SetPoint("BOTTOM", f, "BOTTOM", 0, 5)
-    f.help:SetText("Shift+Drag to move")
-    f.help:SetTextColor(0.7, 0.7, 0.7, 1)
+    f.timer = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    f.timer:SetPoint("TOP", f.zone, "BOTTOM", 0, -2)
+    f.timer:SetText("00:00")
+    
+    local helpButton = CreateFrame("Button", nil, f)
+    helpButton:SetWidth(16)
+    helpButton:SetHeight(16)
+    helpButton:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -5, 5)
+    
+    local helpText = helpButton:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    helpText:SetPoint("CENTER", helpButton, "CENTER", 0, 0)
+    helpText:SetText("?")
+    helpText:SetTextColor(1, 0.82, 0)
+
+    helpButton.tooltipText = "Shift+Drag to move this timer."
+    
+    helpButton:SetScript("OnEnter", function()
+        GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+        GameTooltip:SetText(this.tooltipText, nil, nil, nil, nil, true)
+        GameTooltip:Show()
+    end)
+    
+    helpButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
 
     f:SetScript("OnUpdate", function(self, elapsed)
         if not FlightPathTurtleTimer.startTime or FlightPathTurtleTimer.startTime == 0 then return end
